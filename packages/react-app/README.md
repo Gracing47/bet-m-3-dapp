@@ -1,36 +1,178 @@
-# React Framework + NextJS | Celo Composer
+# BETM3 React Application
 
-Celo Composer support React boilerplate template with TailwindCSS. This is a starter kit with no additional boilerplate code. It's a perfect starter kit to get your project started on Celo blockchain.
+This is a React application for interacting with the BETM3 betting smart contracts.
 
-## Setup & Installation
+## Overview
+
+The BETM3 React application provides a user-friendly interface for interacting with the betting smart contracts deployed on the Celo blockchain. Users can:
+
+- Connect their wallet
+- Create betting contracts
+- Create bets with specific conditions
+- Join existing bets
+- Submit and finalize resolutions
+
+## Development
+
+### Prerequisites
+
+- Node.js (>= 16.0.0)
+- Yarn
+
+### Setup
+
+1. Install dependencies:
 
 ```bash
-yarn
+yarn install
 ```
 
-Run `yarn` or `npm install` to install all the required dependencies to run the dApp.
+2. Set up environment variables:
 
-> React + Tailwind CSS Template does not have any dependency on hardhat and truffle.
-> This starterkit does not include connection of Hardhat/Truffle with ReactJS. It's up to the user to integrate smart contract with ReactJS. This gives user more flexibily over the dApp.
+Create a `.env.local` file with the following variables:
 
--   To start the dApp, run the following command.
+```
+NEXT_PUBLIC_BETTING_FACTORY_ADDRESS=your_factory_address
+NEXT_PUBLIC_MOCK_TOKEN_ADDRESS=your_token_address
+```
+
+### Running the Application
 
 ```bash
-yarn react-dev
+yarn dev
 ```
 
-## Dependencies
+### Building for Production
 
-### Default
+```bash
+yarn build
+```
 
--   [Next.js](https://nextjs.org/) app framework
--   [TailwindCSS](https://tailwindcss.com/) for UI
--   [rainbowkit-celo](https://www.npmjs.com/package/@celo/rainbowkit-celo), a plugin to help rainbowkit developers support the CELO protocol faster.
+## Testing
 
-## Architecture
+The BETM3 React application uses Jest and React Testing Library for testing.
 
--   `/pages` includes the main application components (specifically `index.tsx` and `_app.tsx`)
-    -   `_app.tsx` includes configuration
-    -   `index.tsx` is the main page of the application
--   `/components` includes components that are rendered in `index.tsx`
--   `/public` includes static files
+### Running Tests
+
+```bash
+yarn test
+```
+
+### Running Tests with Coverage
+
+```bash
+yarn test --coverage
+```
+
+### Test Structure
+
+- `components/__tests__/`: Tests for React components
+- `contexts/__tests__/`: Tests for React hooks and contexts
+
+### Testing Patterns
+
+#### Component Tests
+
+Component tests focus on:
+- Rendering the component with different props
+- Verifying the DOM output
+- Testing user interactions
+
+Example:
+
+```tsx
+import { render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import BettingInterface from '../BettingInterface';
+
+// Mock dependencies
+jest.mock('@/contexts/useBetting', () => ({
+  useBetting: jest.fn()
+}));
+
+// Import the mocked module
+import { useBetting } from '@/contexts/useBetting';
+
+describe('BettingInterface Component', () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+  });
+
+  it('renders connect wallet button when no wallet is connected', () => {
+    (useBetting as jest.Mock).mockReturnValue({
+      address: null,
+      // other mock values...
+    });
+
+    render(<BettingInterface />);
+    
+    expect(screen.getByText('Connect Wallet')).toBeInTheDocument();
+  });
+});
+```
+
+#### Hook Tests
+
+Hook tests focus on:
+- Initial state
+- State updates
+- Async operations
+- Error handling
+
+Example:
+
+```tsx
+import { renderHook } from '@testing-library/react-hooks';
+import { useBetting } from '../useBetting';
+
+describe('useBetting Hook', () => {
+  it('initializes with default values', () => {
+    const { result } = renderHook(() => useBetting());
+    
+    expect(result.current.address).toBeNull();
+    expect(result.current.isLoading).toBe(false);
+  });
+});
+```
+
+## Directory Structure
+
+```
+packages/react-app/
+├── src/                # Source code directory
+│   ├── components/     # React components
+│   │   ├── betting/   # Betting-related components
+│   │   ├── layout/    # Layout components
+│   │   └── common/    # Reusable components (buttons, etc.)
+│   └── hooks/         # Custom React hooks
+│       ├── useBetting.ts   # Hook for betting functionality
+│       ├── useWeb3.ts      # Hook for web3 interactions
+│       ├── index.ts        # Hook exports
+│       └── __tests__/     # Hook tests
+├── pages/             # Next.js pages
+├── public/            # Static assets
+├── styles/            # CSS and styling
+├── jest.config.js     # Jest configuration
+├── jest.setup.js      # Jest setup file
+├── tsconfig.json      # TypeScript configuration
+├── next.config.js     # Next.js configuration
+└── tailwind.config.js # Tailwind CSS configuration
+```
+
+## Environment Setup
+
+The application uses several environment files:
+
+- `.env`: Base environment variables
+- `.env.test`: Test-specific environment variables
+- `.env.local`: Local development variables (not committed to git)
+
+## Contract Interaction
+
+The application interacts with the following smart contracts:
+
+- `BettingManagerFactory`: Creates and manages betting contracts
+- `NoLossBetMulti`: Handles the bets, stakes, and resolutions
+- `MockToken`: ERC20 token used for staking
+
+The ABIs for these contracts are stored in the `abis/` directory.

@@ -1,6 +1,6 @@
-import PrimaryButton from "@/components/Button";
-import { useWeb3 } from "@/contexts/useWeb3";
-import Image from "next/image";
+import { PrimaryButton } from "@/components/common";
+import { useWeb3 } from "@/hooks";
+import { BettingInterface } from "@/components/betting";
 import { useEffect, useState } from "react";
 
 export default function Home() {
@@ -8,36 +8,32 @@ export default function Home() {
     address,
     getUserAddress,
     sendCUSD,
-    mintValoraNFT,
-    getNFTs,
     signTransaction,
   } = useWeb3();
-  const [cUSDLoading, setCUSDLoading] = useState(false);
-  const [nftLoading, setNFTLoading] = useState(false);
-  const [signingLoading, setSigningLoading] = useState(false);
-  const [userOwnedNFTs, setUserOwnedNFTs] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
   const [tx, setTx] = useState<any>(undefined);
 
   useEffect(() => {
-    getUserAddress().then(async () => {
-      const tokenURIs = await getNFTs();
-      setUserOwnedNFTs(tokenURIs);
-    });
+    // Connect wallet when page loads
+    getUserAddress();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <div className="flex flex-col justify-center items-center">
-      <div className="h1">
-        There you go... a canvas for your next Valora project!
-      </div>
+      <h1 className="text-2xl font-bold mb-4">
+        BETM3 - Decentralized Betting Platform
+      </h1>
+      
+      {/* Display wallet info and demo buttons */}
       {address && (
-        <>
-          <div className="h2 text-center">
-            Your address: <span className="font-bold text-sm">{address}</span>
+        <div className="w-full max-w-2xl mb-8">
+          <div className="text-sm mb-4">
+            Connected wallet: <span className="font-mono">{address.substring(0, 6)}...{address.substring(address.length - 4)}</span>
           </div>
+          
           {tx && (
-            <p className="font-bold mt-4">
+            <p className="font-bold my-2 text-green-600">
               Tx Completed: {(tx.hash as string).substring(0, 6)}...
               {(tx.hash as string).substring(
                 tx.hash.length - 6,
@@ -45,74 +41,36 @@ export default function Home() {
               )}
             </p>
           )}
-          <div className="w-full px-3 mt-7">
+          
+          <div className="flex gap-4 mb-6">
             <PrimaryButton
-              loading={signingLoading}
+              loading={loading}
               onClick={async () => {
-                setSigningLoading(true);
+                setLoading(true);
                 const tx = await sendCUSD(address, "0.1");
                 setTx(tx);
-                setSigningLoading(false);
+                setLoading(false);
               }}
-              title="Send 0.1 cUSD to your own address"
-              widthFull
+              title="Send 0.1 cUSD to yourself"
             />
-          </div>
 
-          <div className="w-full px-3 mt-6">
             <PrimaryButton
-              loading={cUSDLoading}
+              loading={loading}
               onClick={async () => {
-                setCUSDLoading(true);
+                setLoading(true);
                 await signTransaction();
-                setCUSDLoading(false);
+                setLoading(false);
               }}
-              title="Sign a Transaction"
-              widthFull
+              title="Sign Message"
             />
           </div>
-
-          {userOwnedNFTs.length > 0 ? (
-            <div className="flex flex-col items-center justify-center w-full mt-7">
-              <p className="font-bold">My NFTs</p>
-              <div className="w-full grid grid-cols-2 gap-3 mt-3 px-2">
-                {userOwnedNFTs.map((tokenURI, index) => (
-                  <div
-                    key={index}
-                    className="p-2 border-[3px] border-colors-secondary rounded-xl"
-                  >
-                    <Image
-                      alt="VALORA NFT"
-                      src={tokenURI}
-                      className="w-[160px] h-[200px] object-cover"
-                      width={160}
-                      height={200}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="mt-5">You do not have any NFTs yet</div>
-          )}
-
-          <div className="w-full px-3 mt-5">
-            <PrimaryButton
-              loading={nftLoading}
-              onClick={async () => {
-                setNFTLoading(true);
-                const tx = await mintValoraNFT();
-                const tokenURIs = await getNFTs();
-                setUserOwnedNFTs(tokenURIs);
-                setTx(tx);
-                setNFTLoading(false);
-              }}
-              title="Mint Valora NFT"
-              widthFull
-            />
-          </div>
-        </>
+        </div>
       )}
+      
+      {/* Main betting interface */}
+      <div className="w-full max-w-4xl">
+        <BettingInterface />
+      </div>
     </div>
   );
 }

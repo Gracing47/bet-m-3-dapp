@@ -1,4 +1,5 @@
 import "@nomicfoundation/hardhat-toolbox";
+import "@nomicfoundation/hardhat-ignition";
 import dotenv from "dotenv";
 import { HardhatUserConfig } from "hardhat/config";
 
