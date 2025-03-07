@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import PrimaryButton from '@/components/common/Button';
+import { PrimaryButton } from '@/components/common';
+import { ContractSelector } from '@/components/betting';
 import { useBetting } from '@/hooks/useBetting';
 
 export default function BettingInterface() {
@@ -33,14 +34,8 @@ export default function BettingInterface() {
   const [isCancel, setIsCancel] = useState<boolean>(false);
   const [transactionHash, setTransactionHash] = useState<string | null>(null);
 
-  useEffect(() => {
-    // If there's a selected contract, get the bets for it
-    if (selectedContract) {
-      selectBettingContract(selectedContract).then(() => {
-        getBets();
-      });
-    }
-  }, [selectedContract, getBets, selectBettingContract]);
+  // We no longer need this effect as the ContractSelector handles this logic
+  // The onSelectContract callback in ContractSelector now handles this
 
   // Handle contract creation
   const handleCreateContract = async () => {
@@ -128,41 +123,25 @@ export default function BettingInterface() {
             </div>
           )}
           
-          <div className="border p-4 rounded-lg">
-            <h3 className="text-xl font-semibold mb-2">Factory Operations</h3>
-            <div className="flex gap-2">
-              <PrimaryButton 
-                loading={isLoading} 
-                onClick={handleCreateContract} 
-                title="Create Betting Contract" 
-                widthFull
-              />
-              <PrimaryButton 
-                loading={isLoading} 
-                onClick={getBettingContracts} 
-                title="Refresh Contracts" 
-                widthFull
-              />
-            </div>
-          </div>
+          {/* Factory operations are now handled by ContractSelector */}
           
-          {bettingContracts.length > 0 && (
-            <div className="border p-4 rounded-lg">
-              <h3 className="text-xl font-semibold mb-2">Betting Contracts</h3>
-              <select 
-                value={selectedContract} 
-                onChange={(e) => setSelectedContract(e.target.value)}
-                className="w-full p-2 border rounded-md mb-2"
-              >
-                <option value="">Select a contract</option>
-                {bettingContracts.map((contract, index) => (
-                  <option key={index} value={contract}>
-                    {contract.substring(0, 10)}...{contract.substring(contract.length - 8)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          <ContractSelector
+            bettingContracts={bettingContracts}
+            isLoading={isLoading}
+            onSelectContract={async (contractAddress) => {
+              try {
+                await selectBettingContract(contractAddress);
+                await getBets();
+                setSelectedContract(contractAddress);
+                return true;
+              } catch (error) {
+                console.error("Error selecting contract:", error);
+                return false;
+              }
+            }}
+            onCreateContract={handleCreateContract}
+            onGetContracts={getBettingContracts}
+          />
           
           {selectedContract && (
             <div className="border p-4 rounded-lg">
@@ -334,4 +313,4 @@ export default function BettingInterface() {
       )}
     </div>
   );
-} 
+}

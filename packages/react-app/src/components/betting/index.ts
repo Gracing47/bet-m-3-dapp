@@ -7,4 +7,5 @@ export { default as BetCard, type BetStatus } from './BetCard';
 export { default as StakeInput } from './StakeInput';
 export { default as ResolutionPanel } from './ResolutionPanel';
 export { default as BetCreation, type BetData } from './BetCreation';
-export { default as BetList, type Bet } from './BetList'; 
+export { default as BetList, type Bet } from './BetList';
+export { default as ContractSelector } from './ContractSelector';
