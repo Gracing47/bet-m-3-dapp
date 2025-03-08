@@ -53,7 +53,7 @@ contract NoLossBetMulti is Ownable, ReentrancyGuard {
 
     // Configuration parameters
     uint256 public constant DEFAULT_BET_DURATION = 7 days;      // Default length of a bet
-    uint256 public constant MIN_STAKE = 10 * 10**18;            // Minimum stake, e.g. 10 tokens
+    uint256 public constant MIN_STAKE = 1 * 10**17;            // Minimum stake, 0.1 tokens
     uint256 public constant RESOLUTION_PERIOD = 24 hours;       // Time window to cast resolution votes
 
     // Simulated yield rate (e.g. 5% by default) — can be changed by the owner

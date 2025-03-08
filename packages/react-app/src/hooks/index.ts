@@ -4,4 +4,5 @@
 
 // Export hooks individually
 export { useBetting } from './useBetting';
-export { useWeb3 } from './useWeb3'; 
+export { useWeb3 } from './web3';
+export { useWallet } from './useWallet'; 

@@ -43,4 +43,26 @@ export interface BettingHook extends BettingState {
   submitResolution: (betId: number, outcome: boolean) => Promise<any>;
   finalizeResolution: (betId: number) => Promise<any>;
   adminFinalizeResolution: (betId: number, outcome: boolean, cancel: boolean) => Promise<any>;
+}
+
+export interface BetData {
+  id: string;
+  betIdOnChain: number;
+  question: string;
+  creator: string;
+  expirationDate: number;
+  endDate: string;
+  createdAt: number;
+  resolved: boolean;
+  yesStake: bigint;
+  noStake: bigint;
+  totalStake: bigint;
+  resolutionFinalized: boolean;
+  winningOutcome: boolean;
+  status: 'active' | 'resolved' | 'expired';
+  userParticipation: {
+    isCreator: boolean;
+    hasJoined: boolean;
+    stake: bigint;
+  };
 } 
