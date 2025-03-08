@@ -2,6 +2,7 @@ import React from 'react';
 import { ethers } from 'ethers';
 import Link from 'next/link';
 import { BetData } from '@/types/betting';
+import { Badge, Card, Tooltip, PrimaryButton, SecondaryButton, LoadingSpinner } from '@/components/common';
 
 interface BetCardProps {
   bet: BetData;
@@ -9,17 +10,24 @@ interface BetCardProps {
   onClick?: () => void;
   showActions?: boolean;
   dark?: boolean;
+  onPlaceBet?: (betId: number, amount: string, prediction: boolean) => Promise<any>;
+  onViewDetails?: (betId: number) => void;
+  isJoining?: boolean;
 }
 
 /**
  * BetCard component displays a card with bet information
+ * Enhanced with improved UI elements and interaction states
  */
 const BetCard: React.FC<BetCardProps> = ({ 
   bet, 
   isSelected = false, 
   onClick, 
   showActions = true,
-  dark = true
+  dark = true,
+  onPlaceBet,
+  onViewDetails,
+  isJoining = false
 }) => {
   // Format address for display
   const formatAddress = (addr: string): string => {
@@ -49,105 +57,141 @@ const BetCard: React.FC<BetCardProps> = ({
   let statusColor = "";
   let statusText = "";
   
-  if (bet.resolved) {
-    statusColor = "bg-purple-900/30 text-purple-300";
-    statusText = "Resolved";
-  } else if (bet.status === 'expired') {
-    statusColor = "bg-yellow-900/30 text-yellow-300";
-    statusText = "Expired";
-  } else {
-    statusColor = "bg-indigo-900/30 text-indigo-300";
+  if (bet.status === 'active') {
+    statusColor = "success";
     statusText = "Active";
+  } else if (bet.status === 'expired') {
+    statusColor = "warning";
+    statusText = "Expired";
+  } else if (bet.status === 'resolved') {
+    statusColor = "purple";
+    statusText = "Resolved";
   }
 
-  // Background and border styles based on dark mode
-  const bgClass = dark 
-    ? "border-white/10 bg-white/5 backdrop-blur-sm" 
-    : "border-gray-200 bg-white";
-  
-  const textClass = dark 
-    ? "text-white" 
-    : "text-gray-800";
-  
-  const mutedTextClass = dark 
-    ? "text-white/50" 
-    : "text-gray-500";
-  
-  const hoverClass = dark 
-    ? "hover:border-indigo-500/50" 
-    : "hover:border-indigo-500/20";
+  // Format date
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return dateString;
+    }
+  };
 
+  // Handle view details
+  const handleViewDetails = () => {
+    if (onViewDetails) {
+      onViewDetails(bet.betIdOnChain);
+    }
+  };
+  
   return (
-    <div 
-      className={`border rounded-xl overflow-hidden ${bgClass} ${hoverClass} transition-all duration-200 group ${isSelected ? 'border-indigo-500 ring-1 ring-indigo-500/50' : ''}`}
-      onClick={onClick}
-    >
-      <div className={`p-6 ${onClick ? 'cursor-pointer' : ''}`}>
-        <div className="flex justify-between items-start mb-4">
-          <span className={`text-xs ${mutedTextClass}`}>#{bet.id}</span>
-          <span className={`text-xs px-2 py-1 rounded-full ${statusColor}`}>{statusText}</span>
+    <Card 
+      title={
+        <div className="flex items-center justify-between w-full">
+          <div className="truncate max-w-[75%] text-lg font-medium">{bet.question}</div>
+          <Badge variant={statusColor as any}>{statusText}</Badge>
         </div>
-        
-        <h3 className={`text-lg font-medium mb-4 group-hover:text-indigo-300 transition-colors ${textClass}`}>
-          {bet.question}
-        </h3>
-        
-        <div className="space-y-3 mb-4">
-          <div className="flex justify-between text-sm">
-            <span className={mutedTextClass}>End date:</span>
-            <span className={`${textClass} ${bet.status === 'expired' ? 'text-yellow-300' : ''}`}>{endDateDisplay}</span>
+      }
+      className={`transition-all duration-200 ${isSelected ? 'ring-2 ring-primary-light' : ''} ${
+        onClick ? 'cursor-pointer hover:shadow-md' : ''
+      } ${dark ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}`}
+      onClick={onClick}
+      hoverable={!!onClick}
+      bordered
+    >
+      <div className="space-y-4">
+        {/* Bet Info Section */}
+        <div className="flex flex-col space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="text-white/50 text-sm">Creator:</span>
+            <Tooltip content={bet.creator} position="top">
+              <span className="font-mono">{formatAddress(bet.creator)}</span>
+            </Tooltip>
           </div>
           
-          <div className="flex justify-between text-sm">
-            <span className={mutedTextClass}>Total stake:</span>
-            <span className={`${textClass} font-medium`}>{formattedTotalStake}</span>
+          <div className="flex justify-between items-center">
+            <span className="text-white/50 text-sm">Total Stake:</span>
+            <span className="font-medium">{formattedTotalStake}</span>
           </div>
           
-          <div className="flex justify-between text-sm">
-            <span className={mutedTextClass}>Creator:</span>
-            <span className={`${textClass} font-mono text-xs`}>{formatAddress(bet.creator)}</span>
+          <div className="flex justify-between items-center">
+            <span className="text-white/50 text-sm">Expires:</span>
+            <span>{formatDate(endDateDisplay)}</span>
           </div>
-          
-          {/* User participation */}
-          {bet.userParticipation && (
-            <div className="flex justify-between text-sm">
-              <span className={mutedTextClass}>Your role:</span>
-              <span className={`${bet.userParticipation.isCreator ? 'text-green-300' : (bet.userParticipation.hasJoined ? 'text-blue-300' : mutedTextClass)}`}>
-                {bet.userParticipation.isCreator 
-                  ? 'Creator' 
-                  : bet.userParticipation.hasJoined 
-                    ? 'Participant' 
-                    : 'None'}
+
+          {bet.status === 'resolved' && (
+            <div className="flex justify-between items-center mt-2">
+              <span className="text-white/50 text-sm">Outcome:</span>
+              <span className={bet.winningOutcome ? 'text-green-500 font-medium' : 'text-red-500 font-medium'}>
+                {bet.winningOutcome ? 'Yes' : 'No'}
               </span>
             </div>
           )}
-          
-          {/* Prediction probability bar */}
-          <div className="mt-4">
-            <div className="flex justify-between text-xs">
-              <span className={textClass}>No ({100 - yesPercent}%)</span>
-              <span className={textClass}>Yes ({yesPercent}%)</span>
-            </div>
-            <div className={`w-full h-2 ${dark ? 'bg-white/10' : 'bg-gray-200'} rounded-full overflow-hidden`}>
-              <div 
-                className="h-full bg-gradient-to-r from-blue-500 to-indigo-500"
-                style={{ width: `${yesPercent}%` }}
-              ></div>
-            </div>
+        </div>
+        
+        {/* Progress Bar */}
+        <div className="mt-4 space-y-1">
+          <div className="flex justify-between text-sm mb-1">
+            <span>Yes: {yesPercent}%</span>
+            <span>No: {100 - yesPercent}%</span>
+          </div>
+          <div className="w-full bg-gray-700 rounded-full h-2.5">
+            <div 
+              className="bg-gradient-to-r from-indigo-500 to-blue-500 h-2.5 rounded-full" 
+              style={{ width: `${yesPercent}%` }} 
+            />
           </div>
         </div>
         
-        {showActions && (
-          <div className={`pt-4 border-t ${dark ? 'border-white/10' : 'border-gray-200'}`}>
-            <Link href={`/test?betId=${bet.id}`} className="w-full block">
-              <button className="w-full py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 transition-all text-white">
-                {bet.resolved ? 'View Result' : (bet.status === 'expired' ? 'Submit Resolution' : 'Participate')}
-              </button>
-            </Link>
+        {/* User Participation */}
+        {bet.userParticipation && (
+          <div className="mt-3 pt-3 border-t border-gray-700">
+            <div className="flex items-center gap-2">
+              {bet.userParticipation.isCreator && (
+                <Badge variant="primary" size="sm">Creator</Badge>
+              )}
+              {bet.userParticipation.hasJoined && !bet.userParticipation.isCreator && (
+                <Badge variant="success" size="sm">Joined</Badge>
+              )}
+              {bet.userParticipation.stake > BigInt(0) && (
+                <span className="text-sm">
+                  Your stake: {parseFloat(ethers.formatEther(bet.userParticipation.stake)).toLocaleString(undefined, { maximumFractionDigits: 2 })} MOCK
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Actions */}
+        {showActions && bet.status === 'active' && (
+          <div className="mt-4 space-x-2 flex">
+            <SecondaryButton 
+              onClick={handleViewDetails}
+              className="flex-1"
+            >
+              View Details
+            </SecondaryButton>
+            
+            {onPlaceBet && !bet.userParticipation?.hasJoined && (
+              <PrimaryButton 
+                onClick={() => onPlaceBet(bet.betIdOnChain, "0.1", true)}
+                className="flex-1"
+                disabled={isJoining}
+              >
+                {isJoining ? <LoadingSpinner size="sm" /> : 'Place Bet'}
+              </PrimaryButton>
+            )}
           </div>
         )}
       </div>
-    </div>
+    </Card>
   );
 };
 

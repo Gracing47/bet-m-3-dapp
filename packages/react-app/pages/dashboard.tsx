@@ -1,8 +1,28 @@
 import { useEffect, useState } from 'react';
-import { useWeb3 } from '@/hooks';
-import { Card, Alert, Badge, LoadingSpinner } from '@/components/common';
-import { WalletConnection } from '@/components/betting';
+import { ethers } from 'ethers';
+import { useWeb3, useBetStats, useBetHistory } from '@/hooks';
+import { 
+  Card, 
+  Alert, 
+  Badge, 
+  LoadingSpinner, 
+  PrimaryButton, 
+  SecondaryButton,
+  StatsCard,
+  ProgressBar
+} from '@/components/common';
+import { WalletConnection, BetHistoryDashboard, BetCard } from '@/components/betting';
+import { Container } from '@/components/layout';
 import { useRouter } from 'next/router';
+import { 
+  ArrowRightIcon,
+  ChartBarIcon,
+  CurrencyDollarIcon,
+  UsersIcon,
+  ClockIcon,
+  ScaleIcon,
+  BanknotesIcon
+} from '@heroicons/react/24/outline';
 
 // Mock bet type for the dashboard
 type UserBet = {
@@ -16,221 +36,336 @@ type UserBet = {
 };
 
 export default function DashboardPage() {
-  const { address, getUserAddress } = useWeb3();
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
-  const [userBets, setUserBets] = useState<UserBet[]>([]);
+  const { address, getUserAddress, disconnect } = useWeb3();
+  const [activeTab, setActiveTab] = useState<'overview' | 'history'>('overview');
   
-  // Mock data for demonstration
-  const mockBets: UserBet[] = [
-    {
-      id: '1',
-      title: 'Will ETH price exceed $3000 by March 31st?',
-      amount: '50.00 cUSD',
-      prediction: true,
-      createdAt: '2023-03-01',
-      status: 'active',
-    },
-    {
-      id: '2',
-      title: 'Will the new governance proposal pass?',
-      amount: '25.00 cUSD',
-      prediction: false,
-      createdAt: '2023-02-15',
-      status: 'won',
-      outcome: false,
-    },
-    {
-      id: '3',
-      title: 'Will BTC reach $50K before April?',
-      amount: '100.00 cUSD',
-      prediction: true,
-      createdAt: '2023-02-10',
-      status: 'lost',
-      outcome: false,
-    },
-    {
-      id: '4',
-      title: 'Will the new DeFi protocol launch by end of March?',
-      amount: '35.00 cUSD',
-      prediction: true,
-      createdAt: '2023-02-28',
-      status: 'pending',
-    },
-  ];
+  // Get bet statistics
+  const {
+    totalBets,
+    activeBets,
+    resolvedBets,
+    totalStaked,
+    largestBet,
+    participantCount,
+    isLoading: statsLoading,
+    yesVotes,
+    noVotes,
+    expiredBets,
+  } = useBetStats();
 
-  useEffect(() => {
-    // Connect wallet when page loads
-    getUserAddress();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    // Simulate fetching data
-    const fetchData = async () => {
-      setIsLoading(true);
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // In a real app, you'd fetch user bets from blockchain here
-      setUserBets(mockBets);
-      setIsLoading(false);
-    };
-
-    if (address) {
-      fetchData();
-    }
-  }, [address]);
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-blue-100 text-blue-800';
-      case 'won':
-        return 'bg-green-100 text-green-800';
-      case 'lost':
-        return 'bg-red-100 text-red-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  // Handler functions
+  const handleViewBetDetails = (betId: number) => {
+    router.push(`/betting?betId=${betId}`);
   };
 
-  if (!address) {
-    return (
-      <div className="w-full max-w-6xl mx-auto py-8">
-        <div className="text-center py-16">
-          <h1 className="text-3xl font-bold mb-4">My Dashboard</h1>
-          <Alert type="info">
-            Please connect your wallet to view your dashboard.
-          </Alert>
-          <div className="mt-8">
-            <WalletConnection 
-              isConnected={!!address}
-              address={address || undefined}
-              onConnect={getUserAddress}
-              onDisconnect={() => {
-                // Disconnect logic
-                console.log('Disconnect wallet');
-              }}
+  const handleCreateBet = () => {
+    router.push('/create-bet');
+  };
+
+  // Format currency values
+  const formatAmount = (amount: bigint): string => {
+    return `${parseFloat(ethers.formatEther(amount)).toLocaleString(undefined, {
+      maximumFractionDigits: 2
+    })} MOCK`;
+  };
+
+  // Render the overview tab with Uniswap-inspired design
+  const renderOverviewTab = () => (
+    <div className="space-y-8">
+      {/* Hero section with stats */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-900 via-violet-900 to-purple-900">
+        {/* Background decorations */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-0 -left-1/4 w-1/2 h-1/2 bg-blue-500/10 rounded-full filter blur-3xl"></div>
+          <div className="absolute bottom-0 -right-1/4 w-1/2 h-1/2 bg-purple-500/10 rounded-full filter blur-3xl"></div>
+        </div>
+        
+        {/* Content */}
+        <div className="relative p-8">
+          <h1 className="text-3xl font-bold text-white mb-2">Welcome to BETM3</h1>
+          <p className="text-indigo-200 mb-6 max-w-2xl">
+            Create and join no-loss prediction markets on the Celo blockchain. Your principal is always protected.
+          </p>
+          
+          {/* Quick stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <StatsCard
+              title="Total Bets"
+              value={totalBets}
+              icon={<ChartBarIcon className="h-4 w-4" />}
+              loading={statsLoading}
+              gradient="from-indigo-600 to-blue-600"
+              className="bg-white/10 backdrop-blur-sm"
+            />
+            <StatsCard
+              title="Participants"
+              value={participantCount}
+              icon={<UsersIcon className="h-4 w-4" />}
+              loading={statsLoading}
+              gradient="from-pink-600 to-purple-600"
+              className="bg-white/10 backdrop-blur-sm"
+            />
+            <StatsCard
+              title="Total Staked"
+              value={formatAmount(totalStaked)}
+              icon={<CurrencyDollarIcon className="h-4 w-4" />}
+              loading={statsLoading}
+              gradient="from-purple-600 to-indigo-600"
+              className="bg-white/10 backdrop-blur-sm"
+            />
+            <StatsCard
+              title="Active Bets"
+              value={activeBets}
+              icon={<ClockIcon className="h-4 w-4" />}
+              loading={statsLoading}
+              gradient="from-cyan-600 to-blue-600"
+              className="bg-white/10 backdrop-blur-sm"
             />
           </div>
+          
+          {/* Action buttons */}
+          {address ? (
+            <div className="flex flex-wrap gap-4">
+              <PrimaryButton 
+                onClick={handleCreateBet}
+                className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 shadow-lg shadow-purple-900/30"
+              >
+                Create New Bet
+              </PrimaryButton>
+              <SecondaryButton 
+                onClick={() => router.push('/join-bet')}
+                className="bg-white/10 hover:bg-white/20 text-white border-0"
+              >
+                Join Existing Bet
+              </SecondaryButton>
+            </div>
+          ) : (
+            <div className="bg-white/5 backdrop-blur-sm p-5 rounded-xl border border-white/10">
+              <p className="text-white mb-3">Connect your wallet to access the full functionality</p>
+              <WalletConnection 
+                isConnected={!!address}
+                address={address || undefined}
+                onConnect={() => getUserAddress()}
+                onDisconnect={() => disconnect()}
+              />
+            </div>
+          )}
         </div>
       </div>
-    );
-  }
+      
+      {/* Stats panel with Uniswap-style */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Bet distribution */}
+        <div className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800">
+          <div className="p-5">
+            <h2 className="text-lg font-medium text-white mb-4">Bet Distribution</h2>
+            
+            {statsLoading ? (
+              <div className="flex justify-center py-8">
+                <LoadingSpinner size="lg" />
+              </div>
+            ) : (
+              <div className="space-y-5">
+                <ProgressBar
+                  label="Active"
+                  value={activeBets}
+                  total={totalBets}
+                  gradient="from-indigo-500 to-blue-500"
+                  showValue={true}
+                />
+                
+                <ProgressBar
+                  label="Resolved"
+                  value={resolvedBets}
+                  total={totalBets}
+                  gradient="from-green-500 to-emerald-500"
+                  showValue={true}
+                />
+                
+                <ProgressBar
+                  label="Expired"
+                  value={expiredBets}
+                  total={totalBets}
+                  gradient="from-yellow-500 to-amber-500"
+                  showValue={true}
+                />
 
-  return (
-    <div className="w-full max-w-6xl mx-auto py-8">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">My Dashboard</h1>
-          <p className="text-gray-600 mt-1">
-            Track and manage your betting activity
-          </p>
-        </div>
-        <div className="mt-4 md:mt-0">
-          <button
-            onClick={() => router.push('/betting')}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
-          >
-            Place New Bet
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card className="p-6">
-          <h2 className="text-lg font-semibold mb-2">Total Bets</h2>
-          <p className="text-3xl font-bold">{userBets.length}</p>
-        </Card>
-        
-        <Card className="p-6">
-          <h2 className="text-lg font-semibold mb-2">Active Bets</h2>
-          <p className="text-3xl font-bold">{userBets.filter(bet => bet.status === 'active').length}</p>
-        </Card>
-        
-        <Card className="p-6">
-          <h2 className="text-lg font-semibold mb-2">Win Rate</h2>
-          <p className="text-3xl font-bold">
-            {userBets.length ? 
-              `${Math.round((userBets.filter(bet => bet.status === 'won').length / userBets.filter(bet => ['won', 'lost'].includes(bet.status)).length) * 100)}%` 
-              : '0%'}
-          </p>
-        </Card>
-      </div>
-
-      <div className="mb-8">
-        <h2 className="text-2xl font-semibold mb-4">Your Bets</h2>
-        
-        {isLoading ? (
-          <div className="flex justify-center py-12">
-            <LoadingSpinner size="lg" />
+                <div className="mt-4 pt-4 border-t border-gray-800">
+                  <ProgressBar
+                    label="Yes Predictions"
+                    value={yesVotes}
+                    total={yesVotes + noVotes}
+                    gradient="from-blue-500 to-indigo-500"
+                    showValue={true}
+                  />
+                  
+                  <ProgressBar
+                    label="No Predictions"
+                    value={noVotes}
+                    total={yesVotes + noVotes}
+                    gradient="from-red-500 to-pink-500"
+                    showValue={true}
+                    className="mt-2"
+                  />
+                </div>
+              </div>
+            )}
           </div>
-        ) : userBets.length === 0 ? (
-          <Card className="p-8 text-center">
-            <p className="text-lg text-gray-600">You haven't placed any bets yet.</p>
-            <button
+        </div>
+        
+        {/* Platform metrics */}
+        <div className="col-span-2 bg-gray-900 rounded-xl overflow-hidden border border-gray-800">
+          <div className="p-5">
+            <h2 className="text-lg font-medium text-white mb-4">Platform Metrics</h2>
+            
+            {statsLoading ? (
+              <div className="flex justify-center py-8">
+                <LoadingSpinner size="lg" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <StatsCard
+                  title="Largest Bet"
+                  value={formatAmount(largestBet)}
+                  icon={<BanknotesIcon className="h-4 w-4" />}
+                  gradient="from-green-600 to-emerald-600"
+                />
+                
+                <StatsCard
+                  title="Avg. Stake"
+                  value={totalBets > 0 ? formatAmount(totalStaked / BigInt(totalBets)) : '0.00 MOCK'}
+                  icon={<ScaleIcon className="h-4 w-4" />}
+                  gradient="from-blue-600 to-indigo-600"
+                />
+                
+                <StatsCard
+                  title="Total Value Locked"
+                  value={formatAmount(totalStaked)}
+                  icon={<CurrencyDollarIcon className="h-4 w-4" />}
+                  gradient="from-purple-600 to-indigo-600"
+                />
+                
+                <StatsCard
+                  title="Resolution Ratio"
+                  value={totalBets > 0 ? `${Math.round((resolvedBets / totalBets) * 100)}%` : '0%'}
+                  helpText="Percentage of bets that have been resolved"
+                  gradient="from-cyan-600 to-blue-600"
+                />
+                
+                <StatsCard
+                  title="Active Ratio" 
+                  value={totalBets > 0 ? `${Math.round((activeBets / totalBets) * 100)}%` : '0%'}
+                  helpText="Percentage of bets currently active"
+                  gradient="from-yellow-600 to-amber-600"
+                />
+                
+                <StatsCard
+                  title="Unique Participants"
+                  value={participantCount}
+                  icon={<UsersIcon className="h-4 w-4" />}
+                  gradient="from-pink-600 to-rose-600"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Recent bets section with Uniswap-style */}
+      <div className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800">
+        <div className="p-5">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-lg font-medium text-white">Recent Bets</h2>
+            <PrimaryButton 
               onClick={() => router.push('/betting')}
-              className="mt-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+              className="text-sm bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700"
             >
-              Place Your First Bet
-            </button>
-          </Card>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Bet
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amount
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Prediction
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {userBets.map((bet) => (
-                  <tr key={bet.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{bet.title}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{bet.amount}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge 
-                        className={bet.prediction ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}
-                      >
-                        {bet.prediction ? 'Yes' : 'No'}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{bet.createdAt}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge className={getStatusColor(bet.status)}>
-                        {bet.status.charAt(0).toUpperCase() + bet.status.slice(1)}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              View All
+              <ArrowRightIcon className="ml-1 h-4 w-4" />
+            </PrimaryButton>
           </div>
-        )}
+          
+          {statsLoading ? (
+            <div className="py-8 flex justify-center">
+              <LoadingSpinner size="lg" />
+            </div>
+          ) : totalBets === 0 ? (
+            <div className="text-center py-8 bg-gray-800/30 rounded-xl border border-gray-800/50">
+              <p className="text-gray-400 mb-4">No bets have been created yet.</p>
+              <PrimaryButton 
+                onClick={handleCreateBet}
+                className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700"
+              >
+                Create First Bet
+              </PrimaryButton>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Sample cards - these would be populated from real data */}
+              <Card className="bg-gray-800 border-gray-700 hover:border-indigo-500 transition-colors">
+                <h3 className="font-medium text-white mb-2 truncate">Will ETH price exceed $3000 by March 31st?</h3>
+                <div className="flex justify-between items-center mt-4">
+                  <Badge variant="success">Active</Badge>
+                  <span className="text-white/70 text-sm">50.00 MOCK</span>
+                </div>
+              </Card>
+              <Card className="bg-gray-800 border-gray-700 hover:border-indigo-500 transition-colors">
+                <h3 className="font-medium text-white mb-2 truncate">Will the new governance proposal pass?</h3>
+                <div className="flex justify-between items-center mt-4">
+                  <Badge variant="primary">Resolved</Badge>
+                  <span className="text-white/70 text-sm">25.00 MOCK</span>
+                </div>
+              </Card>
+              <Card className="bg-gray-800 border-gray-700 hover:border-indigo-500 transition-colors">
+                <h3 className="font-medium text-white mb-2 truncate">Will BTC reach $50K before April?</h3>
+                <div className="flex justify-between items-center mt-4">
+                  <Badge variant="error">Expired</Badge>
+                  <span className="text-white/70 text-sm">100.00 MOCK</span>
+                </div>
+              </Card>
+            </div>
+          )}
+        </div>
       </div>
     </div>
+  );
+
+  // Render the history tab
+  const renderHistoryTab = () => (
+    <BetHistoryDashboard onViewBetDetails={handleViewBetDetails} />
+  );
+
+  return (
+    <Container maxWidth="full" className="py-6 px-4 md:px-8 bg-black">
+      <div className="max-w-7xl mx-auto">
+        {/* Tab Navigation */}
+        <div className="flex border-b border-gray-800 mb-6">
+          <button
+            className={`px-4 py-2 font-medium text-sm ${
+              activeTab === 'overview'
+                ? 'text-indigo-400 border-b-2 border-indigo-400'
+                : 'text-gray-400 hover:text-white'
+            }`}
+            onClick={() => setActiveTab('overview')}
+          >
+            Platform Overview
+          </button>
+          <button
+            className={`px-4 py-2 font-medium text-sm ${
+              activeTab === 'history'
+                ? 'text-indigo-400 border-b-2 border-indigo-400'
+                : 'text-gray-400 hover:text-white'
+            }`}
+            onClick={() => setActiveTab('history')}
+          >
+            My Betting History
+          </button>
+        </div>
+        
+        {/* Tab Content */}
+        {activeTab === 'overview' ? renderOverviewTab() : renderHistoryTab()}
+      </div>
+    </Container>
   );
 } 

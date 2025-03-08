@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Fragment } from "react";
 import { useWallet } from "@/hooks/useWallet";
 import Link from "next/link";
 import Image from "next/image";
@@ -6,9 +6,21 @@ import { ethers } from "ethers";
 import NoLossBetMultiABI from "@/assets/abis/NoLossBetMulti.json";
 import useTimestamp from "@/hooks/useTimestamp";
 import BetCard from "@/components/betting/BetCard";
-import { BsArrowRight } from 'react-icons/bs';
-import { FaFire, FaGlobe, FaWallet } from 'react-icons/fa';
 import { BetData } from '@/types/betting';
+import { Menu, Transition } from '@headlessui/react';
+import { 
+  PlusCircleIcon, 
+  ArrowPathIcon, 
+  CurrencyDollarIcon,
+  CheckCircleIcon,
+  ChevronDownIcon,
+  Bars3Icon,
+  XMarkIcon,
+  ArrowRightIcon,
+  FireIcon,
+  GlobeAltIcon,
+  WalletIcon
+} from '@heroicons/react/24/outline';
 
 // Contract address from environment
 const NO_LOSS_BET_MULTI_ADDRESS = process.env.NEXT_PUBLIC_NO_LOSS_BET_MULTI_ADDRESS || "";
@@ -21,6 +33,37 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [networkStatus, setNetworkStatus] = useState<'disconnected' | 'connected' | 'wrong_network'>('disconnected');
   const { extractTimestamp } = useTimestamp();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mockBalance, setMockBalance] = useState<string | null>(null);
+  const [balance, setBalance] = useState<string | null>(null);
+
+  // Action tabs with Uniswap-inspired style
+  const actionTabs = [
+    { 
+      name: 'Mint Mock', 
+      href: '/mint-mock', 
+      icon: <CurrencyDollarIcon className="w-4 h-4 mr-1" />,
+      gradient: 'from-purple-600 to-blue-600'
+    },
+    { 
+      name: 'Create Bet', 
+      href: '/create-bet', 
+      icon: <PlusCircleIcon className="w-4 h-4 mr-1" />,
+      gradient: 'from-pink-600 to-purple-600'
+    },
+    { 
+      name: 'Join Bet', 
+      href: '/join-bet', 
+      icon: <ArrowPathIcon className="w-4 h-4 mr-1" />,
+      gradient: 'from-indigo-600 to-blue-600'
+    },
+    { 
+      name: 'Resolve Bets', 
+      href: '/resolve-bets', 
+      icon: <CheckCircleIcon className="w-4 h-4 mr-1" />,
+      gradient: 'from-teal-600 to-emerald-600'
+    },
+  ];
 
   // Ensure wallet state is only accessed after component mount
   useEffect(() => {
@@ -28,6 +71,17 @@ export default function Home() {
     checkNetwork();
     loadFeaturedBets();
   }, []);
+
+  // Effect to update balances when address changes
+  useEffect(() => {
+    if (address) {
+      getMockTokenBalance();
+      getNativeBalance(address);
+    } else {
+      setMockBalance(null);
+      setBalance(null);
+    }
+  }, [address]);
 
   // Check network status
   const checkNetwork = useCallback(async () => {
@@ -37,14 +91,39 @@ export default function Home() {
       const chainId = await window.ethereum.request({ method: 'eth_chainId' });
       setNetworkStatus(chainId === '0xaef3' ? 'connected' : 'wrong_network');
       
+      // Get native token balance if we have an address
+      if (address) {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const nativeBalance = await provider.getBalance(address);
+        setBalance(ethers.formatEther(nativeBalance));
+      }
+      
       // Set up network change listener
       window.ethereum.on('chainChanged', (newChainId: string) => {
         setNetworkStatus(newChainId === '0xaef3' ? 'connected' : 'wrong_network');
+        // Update balances on network change
+        if (address) {
+          getMockTokenBalance();
+          getNativeBalance(address);
+        }
       });
     } catch (error) {
       console.error("Error checking network:", error);
     }
-  }, []);
+  }, [address]);
+
+  // Get native token balance
+  const getNativeBalance = async (addr: string) => {
+    if (!window.ethereum) return;
+    
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const nativeBalance = await provider.getBalance(addr);
+      setBalance(ethers.formatEther(nativeBalance));
+    } catch (error) {
+      console.error("Error getting native balance:", error);
+    }
+  };
 
   // Switch to Alfajores network
   const switchToAlfajores = async () => {
@@ -180,20 +259,33 @@ export default function Home() {
     }
   };
   
-  // Effect to update user participation when address changes
-  useEffect(() => {
-    if (address && featuredBets.length > 0) {
-      loadFeaturedBets();  // Reload to update participation
+  // Function to get the MOCK token balance
+  const getMockTokenBalance = async () => {
+    if (!address || !window.ethereum) return;
+
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const MOCK_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_MOCK_TOKEN_ADDRESS || "";
+
+      // Simple ABI for balance check
+      const ABI = ["function balanceOf(address account) external view returns (uint256)"];
+      const mockToken = new ethers.Contract(MOCK_TOKEN_ADDRESS, ABI, signer);
+      const balance = await mockToken.balanceOf(address);
+      
+      // Format the balance
+      setMockBalance(ethers.formatEther(balance));
+    } catch (error) {
+      console.error("Error getting MOCK token balance:", error);
     }
-  }, [address]);
+  };
 
   if (!mounted) {
     return null; // Prevent hydration errors
   }
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-hidden">
-      {/* Hero Section with advanced gradient */}
+    <div className="min-h-screen bg-[#0C1425] text-white">
       <div className="relative">
         {/* Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
@@ -201,56 +293,17 @@ export default function Home() {
           <div className="absolute bottom-0 -right-1/4 w-1/2 h-1/2 bg-gradient-to-l from-blue-500/20 to-teal-500/20 rounded-full filter blur-3xl opacity-30"></div>
         </div>
 
-        <div className="relative container mx-auto px-4 pt-32 pb-24 sm:pt-40 sm:pb-32">
-          {/* Navigation Bar */}
-          <nav className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between py-4 px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center space-x-2">
-              <div className="font-bold text-xl bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-600">
-                BETM3
-              </div>
-            </div>
-            <div className="hidden sm:flex items-center space-x-6">
-              <Link href="/my-bets" className="text-sm text-white/80 hover:text-white">
-                My Bets
-              </Link>
-              <Link href="/test" className="text-sm text-white/80 hover:text-white">
-                Explore
-              </Link>
-              <a href="https://docs.celo.org/" target="_blank" rel="noopener noreferrer" className="text-sm text-white/80 hover:text-white">
-                Docs
-              </a>
-            </div>
-            <div>
-              {mounted && (
-                address ? (
-                  <button 
-                    onClick={disconnect}
-                    className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-sm font-medium backdrop-blur-sm"
-                  >
-                    {`${address.substring(0, 6)}...${address.substring(address.length - 4)}`}
-                  </button>
-                ) : (
-                  <button 
-                    onClick={connect}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-sm font-medium transition-all duration-200"
-                  >
-                    Connect Wallet
-                  </button>
-                )
-              )}
-            </div>
-          </nav>
-
+        <div className="relative container mx-auto px-4 pt-32 pb-24">
           {/* Hero Content */}
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold leading-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 mb-6">
+          <div className="text-center max-w-5xl mx-auto">
+            <h1 className="text-5xl sm:text-7xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500">
               No-Loss Betting on the Blockchain
             </h1>
             <p className="text-xl text-white/70 mb-8">
               Make predictions, stake tokens, and earn rewards without risk. Your principal is always protected.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/test" className="inline-block">
+              <Link href="/betting" className="inline-block">
                 <button className="w-full sm:w-auto px-6 py-3 rounded-xl font-medium bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 transition-all duration-200 shadow-lg shadow-indigo-500/20">
                   Launch App
                 </button>
@@ -276,8 +329,8 @@ export default function Home() {
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           <div className="relative">
-            <div className="absolute -left-2 -top-2 w-8 h-8 rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 flex items-center justify-center text-white font-bold">
-              1
+            <div className="absolute -left-2 -top-2 w-8 h-8 rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 flex items-center justify-center text-white">
+              <WalletIcon className="h-4 w-4" />
             </div>
             <div className="border border-white/10 rounded-xl p-6 backdrop-blur-sm bg-white/5 h-full">
               <h3 className="text-xl font-semibold mb-4 pt-3">Connect Your Wallet</h3>
@@ -288,8 +341,8 @@ export default function Home() {
           </div>
           
           <div className="relative">
-            <div className="absolute -left-2 -top-2 w-8 h-8 rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 flex items-center justify-center text-white font-bold">
-              2
+            <div className="absolute -left-2 -top-2 w-8 h-8 rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 flex items-center justify-center text-white">
+              <ArrowPathIcon className="h-4 w-4" />
             </div>
             <div className="border border-white/10 rounded-xl p-6 backdrop-blur-sm bg-white/5 h-full">
               <h3 className="text-xl font-semibold mb-4 pt-3">Stake on Predictions</h3>
@@ -300,8 +353,8 @@ export default function Home() {
           </div>
           
           <div className="relative">
-            <div className="absolute -left-2 -top-2 w-8 h-8 rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 flex items-center justify-center text-white font-bold">
-              3
+            <div className="absolute -left-2 -top-2 w-8 h-8 rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 flex items-center justify-center text-white">
+              <CurrencyDollarIcon className="h-4 w-4" />
             </div>
             <div className="border border-white/10 rounded-xl p-6 backdrop-blur-sm bg-white/5 h-full">
               <h3 className="text-xl font-semibold mb-4 pt-3">Claim Your Rewards</h3>
@@ -322,11 +375,9 @@ export default function Home() {
             <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500">
               Trending Predictions
             </h2>
-            <Link href="/test" className="text-sm text-indigo-400 hover:text-indigo-300 flex items-center gap-2">
+            <Link href="/betting" className="text-sm text-indigo-400 hover:text-indigo-300 flex items-center gap-2">
               View all
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
+              <ArrowRightIcon className="h-4 w-4" />
             </Link>
           </div>
           
@@ -356,7 +407,7 @@ export default function Home() {
             <div className="p-8 border border-white/10 rounded-xl text-center">
               <p className="text-white/60">No active predictions found.</p>
               <p className="text-white/40 mt-2 text-sm">Be the first to create a prediction!</p>
-              <Link href="/test" className="inline-block mt-4">
+              <Link href="/create-bet" className="inline-block mt-4">
                 <button className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 rounded-lg text-sm">
                   Create Prediction
                 </button>

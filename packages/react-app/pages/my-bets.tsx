@@ -6,6 +6,7 @@ import useTimestamp from '@/hooks/useTimestamp';
 import useBlockchainTime from '@/hooks/useBlockchainTime';
 import { BetData } from '@/types/betting';
 import { useWallet } from '@/hooks/useWallet';
+import { Container } from '@/components/ui/Container';
 
 // Contract address from environment
 const NO_LOSS_BET_MULTI_ADDRESS = process.env.NEXT_PUBLIC_NO_LOSS_BET_MULTI_ADDRESS || "";
@@ -222,8 +223,8 @@ export default function MyBetsPage() {
   }, [address, networkStatus]);
   
   return (
-    <div className="min-h-screen bg-black text-white">
-      <div className="container mx-auto px-4 py-8">
+    <Container maxWidth="full" className="py-6 px-4">
+      <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500">My Bets</h1>
         
         {/* Wallet Connection */}
@@ -331,6 +332,6 @@ export default function MyBetsPage() {
           </>
         )}
       </div>
-    </div>
+    </Container>
   );
 } 

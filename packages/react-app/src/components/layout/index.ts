@@ -7,5 +7,4 @@ export { default as Header } from './Header';
 export { default as Layout } from './Layout';
 export { default as Sidebar } from './Sidebar';
 
-export type { ContainerProps } from './Container';
-export type { NavItem, SidebarProps } from './Sidebar'; 
+export type { ContainerProps } from './Container'; 

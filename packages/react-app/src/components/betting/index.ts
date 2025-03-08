@@ -9,3 +9,5 @@ export { default as BetCard } from './BetCard';
 export { default as WalletConnection } from './WalletConnection';
 export { default as StakeInput } from './StakeInput';
 export { default as ResolutionPanel } from './ResolutionPanel';
+export { default as BetHistoryDashboard } from './BetHistoryDashboard';
+export { default as BetStats } from './BetStats';
