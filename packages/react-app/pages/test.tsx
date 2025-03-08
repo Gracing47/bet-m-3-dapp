@@ -130,19 +130,40 @@ export default function TestPage() {
           const possibleMinutesDuration = Number(rawTimestamp) < 10000 ? Number(rawTimestamp) : null;
           const now = Math.floor(Date.now() / 1000); // Current Unix timestamp
           
+          // Extract the embedded timestamp from the large number
+          // The pattern seems to be that the actual Unix timestamp is embedded within the huge number
+          let extractedTimestamp = null;
+          try {
+            const timestampStr = rawTimestamp.toString();
+            if (timestampStr.length > 10) {
+              // Extract the last 10 digits which likely represent the Unix timestamp
+              const lastDigits = timestampStr.slice(-10);
+              extractedTimestamp = parseInt(lastDigits, 10);
+              
+              // Alternative: Try looking for a pattern like XXXXX0000000YYYYYYYYY where YYYYYYYYY is the timestamp
+              const matches = timestampStr.match(/(\d+)0+(\d{10})$/);
+              if (matches && matches[2]) {
+                extractedTimestamp = parseInt(matches[2], 10);
+              }
+            }
+          } catch (error) {
+            console.error("Error extracting timestamp:", error);
+          }
+          
           // Analyze the timestamp
           const timestampAnalysis = {
             rawValue: rawTimestamp?.toString() || 'undefined',
             asNumber: Number(rawTimestamp),
             isLikelyUnixTimestamp: isUnixTimestamp,
+            extractedTimestamp: extractedTimestamp,
             possibleMinutesDuration: possibleMinutesDuration,
             currentUnixTime: now,
-            differenceFromNow: Number(rawTimestamp) - now,
-            humanReadableDate: isUnixTimestamp ? new Date(Number(rawTimestamp) * 1000).toString() : 'Not a Unix timestamp',
-            isInFuture: Number(rawTimestamp) > now,
-            minutesInFuture: isUnixTimestamp ? Math.floor((Number(rawTimestamp) - now) / 60) : null,
-            hoursInFuture: isUnixTimestamp ? Math.floor((Number(rawTimestamp) - now) / 3600) : null,
-            daysInFuture: isUnixTimestamp ? Math.floor((Number(rawTimestamp) - now) / 86400) : null
+            differenceFromNow: extractedTimestamp ? extractedTimestamp - now : Number(rawTimestamp) - now,
+            humanReadableDate: extractedTimestamp ? new Date(extractedTimestamp * 1000).toString() : 'Not a valid timestamp',
+            isInFuture: extractedTimestamp ? extractedTimestamp > now : Number(rawTimestamp) > now,
+            minutesInFuture: extractedTimestamp ? Math.floor((extractedTimestamp - now) / 60) : null,
+            hoursInFuture: extractedTimestamp ? Math.floor((extractedTimestamp - now) / 3600) : null,
+            daysInFuture: extractedTimestamp ? Math.floor((extractedTimestamp - now) / 86400) : null
           };
           
           console.log(`Bet #${i+1} timestamp analysis:`, timestampAnalysis);
@@ -212,11 +233,27 @@ export default function TestPage() {
             // Detect how the timestamp is stored - Unix timestamp or relative minutes
             let dateObj: Date | null = null;
             
+            // Check for the embedded timestamp pattern
+            const timestampStr = rawTimestamp.toString();
+            let extractedTimestamp = null;
+            
+            if (timestampStr.length > 10) {
+              // Extract the last 10 digits which likely represent the Unix timestamp
+              const lastDigits = timestampStr.slice(-10);
+              extractedTimestamp = parseInt(lastDigits, 10);
+            }
+            
             if (isNaN(timestamp) || timestamp <= 0 || timestamp >= 8640000000) {
-              // Invalid timestamp - use fallback date based on bet ID to make them distinct
-              const offsetMinutes = (i + 1) * 5; // 5 minutes per bet ID
-              dateObj = new Date(Date.now() + offsetMinutes * 60 * 1000);
-              debugInfo.timeCase = "fallback - invalid timestamp";
+              if (extractedTimestamp && extractedTimestamp > 0 && extractedTimestamp < 2000000000) {
+                // Use the extracted timestamp if it looks valid
+                debugInfo.timeCase = "extracted timestamp from large number";
+                dateObj = new Date(extractedTimestamp * 1000);
+              } else {
+                // Invalid timestamp - use fallback date based on bet ID to make them distinct
+                const offsetMinutes = (i + 1) * 5; // 5 minutes per bet ID
+                dateObj = new Date(Date.now() + offsetMinutes * 60 * 1000);
+                debugInfo.timeCase = "fallback - invalid timestamp";
+              }
             } else if (timestamp > 1600000000) {
               // It's likely a Unix timestamp (seconds since Jan 1, 1970)
               // 1600000000 was in 2020, so any timestamp greater than this is definitely an absolute time
@@ -762,10 +799,28 @@ export default function TestPage() {
         return { formatted: "Unknown", remaining: null };
       }
       
-      // Try to convert from timestamp if it's a number
+      // Handle the large timestamp values by extracting the embedded Unix timestamp
       if (!isNaN(Number(dateString))) {
-        date = new Date(Number(dateString));
+        // Check if this is one of those huge numbers with embedded timestamp
+        const timestampStr = dateString.toString();
+        if (timestampStr.length > 10) {
+          // Extract the last 10 digits which likely represent the Unix timestamp
+          const lastDigits = timestampStr.slice(-10);
+          const extractedTimestamp = parseInt(lastDigits, 10);
+          
+          if (!isNaN(extractedTimestamp) && extractedTimestamp > 0 && extractedTimestamp < 2000000000) {
+            // Use the extracted timestamp if it looks valid
+            date = new Date(extractedTimestamp * 1000);
+          } else {
+            // Regular parsing if extraction fails
+            date = new Date(Number(dateString));
+          }
+        } else {
+          // Regular number that's not huge - parse normally
+          date = new Date(Number(dateString));
+        }
       } else {
+        // Regular ISO string date
         date = new Date(dateString);
       }
       
