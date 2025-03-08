@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/common';
+import { Container } from '@/components/ui';
 
 // FAQ item type
 type FAQItem = {
@@ -58,53 +59,55 @@ export default function FAQPage() {
   ];
 
   return (
-    <div className="w-full max-w-4xl mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-4">Frequently Asked Questions</h1>
-        <p className="text-lg text-gray-600">
-          Find answers to common questions about the BETM3 betting platform.
-        </p>
-      </div>
+    <Container maxWidth="full" className="py-6 px-4">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-4">Frequently Asked Questions</h1>
+          <p className="text-lg text-gray-600">
+            Find answers to common questions about the BETM3 betting platform.
+          </p>
+        </div>
 
-      <div className="space-y-4">
-        {faqs.map((faq, index) => (
-          <div key={index} className="border border-gray-200 rounded-lg overflow-hidden">
-            <button
-              className="w-full px-6 py-4 text-left bg-white hover:bg-gray-50 focus:outline-none flex justify-between items-center"
-              onClick={() => toggleFAQ(index)}
-            >
-              <span className="font-medium text-lg">{faq.question}</span>
-              <svg
-                className={`w-5 h-5 transform ${openIndex === index ? 'rotate-180' : ''} transition-transform duration-200`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+        <div className="space-y-4">
+          {faqs.map((faq, index) => (
+            <div key={index} className="border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                className="w-full px-6 py-4 text-left bg-white hover:bg-gray-50 focus:outline-none flex justify-between items-center"
+                onClick={() => toggleFAQ(index)}
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            
-            {openIndex === index && (
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-                <p className="text-gray-700">{faq.answer}</p>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+                <span className="font-medium text-lg">{faq.question}</span>
+                <svg
+                  className={`w-5 h-5 transform ${openIndex === index ? 'rotate-180' : ''} transition-transform duration-200`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              
+              {openIndex === index && (
+                <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                  <p className="text-gray-700">{faq.answer}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
 
-      <div className="mt-12 p-6 bg-blue-50 border border-blue-100 rounded-lg">
-        <h2 className="text-xl font-semibold mb-4">Still have questions?</h2>
-        <p className="mb-4">
-          If you couldn't find the answer to your question, feel free to reach out to us.
-        </p>
-        <button 
-          onClick={() => window.location.href = 'mailto:support@betm3.com'}
-          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
-        >
-          Contact Support
-        </button>
+        <div className="mt-12 p-6 bg-blue-50 border border-blue-100 rounded-lg">
+          <h2 className="text-xl font-semibold mb-4">Still have questions?</h2>
+          <p className="mb-4">
+            If you couldn't find the answer to your question, feel free to reach out to us.
+          </p>
+          <button 
+            onClick={() => window.location.href = 'mailto:support@betm3.com'}
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+          >
+            Contact Support
+          </button>
+        </div>
       </div>
-    </div>
+    </Container>
   );
 } 

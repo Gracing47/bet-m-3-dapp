@@ -1,0 +1,70 @@
+# BETM3 dApp Project Rules
+
+## File Organization
+- Use `/components/betting` for all betting-related components
+- Use `/hooks` for custom React hooks with clear prefixes (e.g., `use...`)
+- Keep all UI types in `/types` directory; betting types in `/types/betting.ts`
+- All pages are in `/pages`
+- Contract ABIs are stored in `/assets/abis`
+
+## Component Structure
+- All components should be defined with TypeScript interfaces for props
+- Components should handle their own loading and error states
+- Use shared reusable components from `/components/common`
+- BetCard component is the standard display for bet information
+
+## Styling Conventions
+- Use Tailwind CSS for all styling
+- Dark mode is the default theme with `dark={true}` prop available
+- Color scheme:
+  - Primary: indigo/blue gradients
+  - Success: green
+  - Warning: yellow
+  - Error: red
+  - Resolved: purple
+  - Muted text: white/50 (50% opacity white)
+- All interactive elements should have hover states
+
+## Data Format Standards
+- Format addresses as: `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`
+- Display timestamps with date and time: `MMM DD, YYYY h:mm a`
+- Format currency values with 2 decimal places maximum
+- Show bet stakes in MOCK token units
+
+## Type Definitions
+- @/types/betting.ts
+  - `BetData` interface for all bet information
+  - Contains question, creator, stakes, status, and user participation info
+
+## Hooks
+- @/hooks/useWallet.ts
+  - Manages wallet connection status and address
+  - Provides connect/disconnect methods
+  - Formats wallet addresses
+- @/hooks/useTimestamp.ts
+  - Handles conversion of blockchain timestamps
+- @/hooks/useBlockchainTime.ts
+  - Verifies bet expiration against blockchain time
+
+## Contract Interactions
+- Contract address from environment: `process.env.NEXT_PUBLIC_NO_LOSS_BET_MULTI_ADDRESS`
+- Network: Alfajores Testnet (chainId: '0xaef3')
+- ABIs: NoLossBetMultiABI for betting functionality
+- Use ethers.js for all blockchain interactions
+
+## Bet States
+- Active: Bet is open for participation
+- Expired: End date has passed but not yet resolved
+- Resolved: Outcome has been determined
+
+## User Participation Types
+- Creator: User who created the bet
+- Participant: User who joined an existing bet
+- None: User has not interacted with the bet
+
+## Common UI Patterns
+- Cards with rounded corners and subtle borders
+- Gradient backgrounds for emphasis
+- Status pills with appropriate colors
+- Progress bars for showing yes/no distribution
+- Loading spinners for async operations 
