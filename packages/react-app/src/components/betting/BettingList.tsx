@@ -88,9 +88,9 @@ const BetList: React.FC<BetListProps> = ({
             {/* Bet Info Section */}
             <div className="flex-1 p-4">
               <div className="flex justify-between items-start mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-md">
-                    Bet #{bet.id}
+                <div>
+                  <span className="text-xs font-medium bg-gray-100 px-2 py-1 rounded-full mr-2">
+                    ID: {bet.id}
                   </span>
                   <Badge 
                     className={bet.resolved 

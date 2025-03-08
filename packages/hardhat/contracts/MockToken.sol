@@ -23,4 +23,12 @@ contract MockToken is ERC20, Ownable {
     function mint(address to, uint256 amount) external onlyOwner {
         _mint(to, amount);
     }
+    
+    /**
+     * @dev Function to mint a fixed amount of tokens to the message sender.
+     * This function is public and can be called by anyone for testing purposes.
+     */
+    function mint() external {
+        _mint(msg.sender, 100 * 10**18); // Mint 100 tokens to the caller
+    }
 } 
